@@ -1,64 +1,71 @@
 package com.main.weatherSystem;
 
+import java.util.Random;
 
 public class WeatherManager {
+    private String currentSeason;
+    private Random random;
 
-    // gets called once per global turn
-    // have this called by game manger on a per-player basis then go through current tasks and apply
-    // affects accordingly
-    public void getWeather(String season, int numbPlayers) {
-        // SUMMER
-        if (season.equals("Summer")){
-            System.out.println("SUMMER");
-            for (int player = 1; player <= numbPlayers; player++) {
-                System.out.println("\nPLAYER " + player + ":");
-                System.out.println("Temperature: " + new Summer().generateTemperature() + " degrees");
-                String weather = new Summer().generateWeather();
-                System.out.println("Weather: " + weather);
-                double[] effects = new Summer().weatherEffects(weather);
-                System.out.println("Resource efficiency will be at " + (int) (effects[0] * 100) + "% of normal");
-                System.out.println("Task speed will be at " + (int) (effects[1] * 100) + "% of normal");
-                System.out.println("Community morale will be at " + (int) (effects[2] * 100) + "% of normal");
-            }
-            // AUTUMN
-        } else if (season.equals("Autumn")) {
-            System.out.println("AUTUMN");
-            for (int player = 1; player <= numbPlayers; player++) {
-                System.out.println("\nPLAYER " + player + ":");
-                System.out.println("Temperature: " + new Autumn().generateTemperature() + " degrees");
-                String weather = new Autumn().generateWeather();
-                System.out.println("Weather: " + weather);
-                double[] effects = new Autumn().weatherEffects(weather);
-                System.out.println("Resource efficiency will be at " + (int) (effects[0] * 100) + "% of normal");
-                System.out.println("Task speed will be at " + (int) (effects[1] * 100) + "% of normal");
-                System.out.println("Community morale will be at " + (int) (effects[2] * 100) + "% of normal");
-            }
-            // WINTER
-        } else if (season.equals("Winter")) {
-            System.out.println("WINTER");
-            for (int player = 1; player <= numbPlayers; player++) {
-                System.out.println("\nPLAYER " + player + ":");
-                System.out.println("Temperature: " + new Winter().generateTemperature() + " degrees");
-                String weather = new Winter().generateWeather();
-                System.out.println("Weather: " + weather);
-                double[] effects = new Winter().weatherEffects(weather);
-                System.out.println("Resource efficiency will be at " + (int) (effects[0] * 100) + "% of normal");
-                System.out.println("Task speed will be at " + (int) (effects[1] * 100) + "% of normal");
-                System.out.println("Community morale will be at " + (int) (effects[2] * 100) + "% of normal");
-            }
-            // SPRING
-        } else if (season.equals("Spring")) {
-            System.out.println("SPRING");
-            for (int player = 1; player <= numbPlayers; player++) {
-                System.out.println("\nPLAYER " + player + ":");
-                System.out.println("Temperature: " + new Spring().generateTemperature() + " degrees");
-                String weather = new Spring().generateWeather();
-                System.out.println("Weather: " + weather);
-                double[] effects = new Spring().weatherEffects(weather);
-                System.out.println("Resource efficiency will be at " + (int) (effects[0] * 100) + "% of normal");
-                System.out.println("Task speed will be at " + (int) (effects[1] * 100) + "% of normal");
-                System.out.println("Community morale will be at " + (int) (effects[2] * 100) + "% of normal");
-            }
+    public WeatherManager() {
+        random = new Random();
+    }
+
+    public String getSeason(int globalTurn) {
+        // Determine the season based on globalTurn
+        String[] seasons = {"Spring", "Summer", "Autumn", "Winter"};
+        currentSeason = seasons[globalTurn % 4];
+        return currentSeason;
+    }
+
+    public String getWeatherForTurn(String currentSeason) {
+        // Generate weather based on the current season
+        switch (currentSeason) {
+            case "Spring":
+                return new Spring().generateWeather();
+            case "Summer":
+                return new Summer().generateWeather();
+            case "Autumn":
+                return new Autumn().generateWeather();
+            case "Winter":
+                return new Winter().generateWeather();
+            default:
+                return "Clear"; // Fallback
+        }
+    }
+
+    public int getMaxMovesModifier(String weather) {
+        // Return a modifier for maxMoves based on the weather
+        switch (weather) {
+            case "Sunny":
+                return 1;  // Increase maxMoves by 1
+            case "Partly Cloudy":
+                return 0;  // No effect
+            case "Cloudy":
+                return 0;  // No effect
+            case "Rainy":
+                return -1; // Reduce maxMoves by 1
+            case "Thunderstorms":
+                return -2; // Reduce maxMoves by 2
+            case "Snow":
+                return -2; // Reduce maxMoves by 2
+            default:
+                return 0;  // No change
+        }
+    }
+
+    public double[] getWeatherEffects(String weather) {
+        // Return the effects of the weather on resource efficiency, task speed, and community morale
+        switch (currentSeason) {
+            case "Spring":
+                return new Spring().weatherEffects(weather);
+            case "Summer":
+                return new Summer().weatherEffects(weather);
+            case "Autumn":
+                return new Autumn().weatherEffects(weather);
+            case "Winter":
+                return new Winter().weatherEffects(weather);
+            default:
+                return new double[]{1, 1, 1}; // Default effects
         }
     }
 }

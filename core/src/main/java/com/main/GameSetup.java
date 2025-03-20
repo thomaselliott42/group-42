@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class GameSetup implements Screen {
     private Stage stage;
@@ -27,7 +28,6 @@ public class GameSetup implements Screen {
     private TextButton plusButton;
     private TextButton minusButton;
     private ShapeRenderer shapeRenderer;
-    private ArrayList<Player> players;
     private ArrayList<Vector2> playerPositions; // List to manage positions of the circles
     private ArrayList<TextField> nameFields; // List to store TextFields for player names
     private float circleRadius = 50; // Circle radius
@@ -35,7 +35,26 @@ public class GameSetup implements Screen {
     private float yPosition = Gdx.graphics.getHeight() / 2; // Y position of the circles and buttons
     private float yOffset = 100; // Offset for positioning the TextField below the circle
 
+    private List<Task> tasks; // List to store tasks loaded from JSON
+
+    public GameSetup() {
+        // Initialize the GameState
+
+    }
+
     public void show() {
+
+        // Use gameState to initialize players, nodes, etc.
+        PlayerManager.getInstance().reset(); // Reset players
+        PlayerManager.getInstance().addPlayer(new Player("Player 1", randomColor())); // Add initial player
+
+        // Load tasks from JSON
+        tasks = ResourceLoader.loadTask();
+        if (tasks == null || tasks.isEmpty()) {
+            Gdx.app.error("ERROR", "Failed to load tasks from JSON");
+            return;
+        }
+
         // Set up the Stage and Skin (used for UI elements like buttons)
         stage = new Stage();
         Gdx.input.setInputProcessor(stage);
@@ -45,12 +64,17 @@ public class GameSetup implements Screen {
         shapeRenderer = new ShapeRenderer();
 
         // Create the player list (starts with one player)
-        players = new ArrayList<>();
         playerPositions = new ArrayList<>();
         nameFields = new ArrayList<>();
 
         // Initialize first player and their position
-        players.add(new Player("Player 1", randomColor()));
+        PlayerManager.getInstance().reset();
+        PlayerManager.getInstance().addPlayer(new Player("Player 1", randomColor()));
+        if (PlayerManager.getInstance().getPlayers().isEmpty()) {
+            Gdx.app.error("ERROR", "No players initialized");
+            return;
+        }
+
         playerPositions.add(new Vector2(100, yPosition));
 
         // Initialize the first TextField for the player's name
@@ -63,81 +87,87 @@ public class GameSetup implements Screen {
         startButton.setSize(200, 50);
         startButton.setPosition(Gdx.graphics.getWidth() / 2 - startButton.getWidth() / 2, yPosition - 150);
 
-        // Add a click listener for the button
         startButton.addListener(new ClickListener() {
             @Override
             public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
-                // Switch to the Main screen (the actual game screen)
+                // Reset the game state
+                resetGame();
+                Gdx.app.log("DEBUG", "Game state reset");
 
-                boolean a = true;
+                boolean allNamesValid = true;
 
-                System.out.println(nameFields.get(0));
-                for(int i = 0; i < players.size(); i++){
-                    if(nameFields.get(i).getText() == ""
-                    ){
-                        a = false;
+                for (TextField nameField : nameFields) {
+                    String trimmedName = nameField.getText().trim();
+                    nameField.setText(trimmedName); // Update field with trimmed text
+
+                    if (trimmedName.isEmpty()) {
+                        allNamesValid = false;
                     }
                 }
 
-                if(a){
-                    for(int i = 0; i < players.size(); i++) {
-                        players.get(i).setName(nameFields.get(i).getText());
-                    }
-                    ((Game) Gdx.app.getApplicationListener()).setScreen(new Main(players));
+                if (!allNamesValid) {
+                    return;
                 }
 
+                // Initialize players
+                PlayerManager.getInstance().reset();
+                for (int i = 0; i < nameFields.size(); i++) {
+                    Player player = new Player(nameFields.get(i).getText(), randomColor());
+                    PlayerManager.getInstance().addPlayer(player);
+                }
+
+
+                // Create the board with the list of tasks
+                Board board = new Board(new ArrayList<>(tasks));
+                Gdx.app.log("DEBUG", "Board initialized with nodes: " + board.getNodes().size());
+
+                // Pass the GameState to the Main class
+                Gdx.app.log("DEBUG", "Switching to Main screen");
+                ((Game) Gdx.app.getApplicationListener()).setScreen(new Main(board.getNodes()));
             }
         });
+
 
         // Create the Plus Button
         plusButton = new TextButton("+", skin);
         plusButton.setSize(50, 50);
         plusButton.setPosition(playerPositions.get(0).x + circleRadius + 20, yPosition);
 
-
         // Create the minus Button
         minusButton = new TextButton("-", skin);
         minusButton.setSize(50, 50);
-        minusButton.setPosition(playerPositions.get(0).x + circleRadius + 20, yPosition-50);
+        minusButton.setPosition(playerPositions.get(0).x + circleRadius + 20, yPosition - 50);
 
-        if(players.size() == 1){
+        if (PlayerManager.getInstance().getPlayers().size() == 1) {
             minusButton.setVisible(false);
-        }else{
+        } else {
             minusButton.setVisible(true);
         }
+
         // Add a click listener for the button
         plusButton.addListener(new ClickListener() {
             @Override
             public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
-
-
-                if(players.size() == 1){
-                    minusButton.setVisible(false);
-                }else{
-                    minusButton.setVisible(true);
-                }
-
-                if (players.size() < 4) {
+                if (PlayerManager.getInstance().getPlayers().size() < 4) {
                     // Add a new player to the list
-                    Player newPlayer = new Player("Player " + (players.size() + 1), randomColor());
-                    players.add(newPlayer);
+                    Player newPlayer = new Player("Player " + (PlayerManager.getInstance().getPlayers().size() + 1), randomColor());
+                    PlayerManager.getInstance().getPlayers().add(newPlayer); // Add the player to PlayerManager
 
                     // Update position for the new player
                     float newX = playerPositions.get(playerPositions.size() - 1).x + circleRadius * 2 + spacing;
                     playerPositions.add(new Vector2(newX, yPosition));
 
                     // Update the name field for the new player
-                    TextField newPlayerNameField = new TextField("Player " + (players.size()), skin);
+                    TextField newPlayerNameField = new TextField("Player " + (PlayerManager.getInstance().getPlayers().size()), skin);
                     newPlayerNameField.setPosition(newX, yPosition - yOffset); // Position the TextField below the circle
                     nameFields.add(newPlayerNameField);
 
                     // Update the plus button position
                     plusButton.setPosition(newX + circleRadius + 20, yPosition);
-                    minusButton.setPosition(newX + circleRadius + 20, yPosition-50);
+                    minusButton.setPosition(newX + circleRadius + 20, yPosition - 50);
 
-                    if(players.size() == 4){
+                    if (PlayerManager.getInstance().getPlayers().size() == 4) {
                         plusButton.setVisible(false);
-
                     }
                 }
             }
@@ -146,31 +176,26 @@ public class GameSetup implements Screen {
         minusButton.addListener(new ClickListener() {
             @Override
             public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
-
-                if (players.size() > 1) {
-
-                    if(players.size() == 1){
+                if (PlayerManager.getInstance().getPlayers().size() > 1) {
+                    if (PlayerManager.getInstance().getPlayers().size() == 1) {
                         minusButton.setVisible(false);
-                    }else{
+                    } else {
                         minusButton.setVisible(true);
                     }
 
-
-                    // Add a new player to the list
-                    playerPositions.remove(players.size() - 1);
-                    nameFields.remove(players.size() - 1);
-                    players.remove(players.size() - 1);
-
+                    // Remove the last player from the list
+                    playerPositions.remove(PlayerManager.getInstance().getPlayers().size() - 1);
+                    nameFields.remove(PlayerManager.getInstance().getPlayers().size() - 1);
+                    PlayerManager.getInstance().getPlayers().remove(PlayerManager.getInstance().getPlayers().size() - 1);
 
                     float newX = playerPositions.get(playerPositions.size() - 1).x + circleRadius * 2 + spacing;
 
                     // Update the plus button position
                     plusButton.setPosition(newX + circleRadius + 20, yPosition);
-                    minusButton.setPosition(newX + circleRadius + 20, yPosition-50);
+                    minusButton.setPosition(newX + circleRadius + 20, yPosition - 50);
 
-                    if(players.size() < 4){
+                    if (PlayerManager.getInstance().getPlayers().size() < 4) {
                         plusButton.setVisible(true);
-
                     }
                 }
             }
@@ -183,38 +208,32 @@ public class GameSetup implements Screen {
         stage.addActor(nameFields.get(0)); // Add the first player's name field
 
         // Add listeners for circle clicks to open color picker
+        ClickListener colorPickerListener = new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.log("Debug", "Circle Clicked");
+                for (int i = 0; i < PlayerManager.getInstance().getPlayers().size(); i++) {
+                    float playerX = playerPositions.get(i).x;
+                    float playerY = playerPositions.get(i).y;
+                    final Player player = PlayerManager.getInstance().getPlayers().get(i);
 
-
-            // Listener for player circles to open color picker
-            ClickListener colorPickerListener = new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    Gdx.app.log("Debug", "Circle Clicked");
-                    for (int i = 0; i < players.size(); i++) {
-                        float playerX = playerPositions.get(i).x;
-                        float playerY = playerPositions.get(i).y;
-                        final Player player = players.get(i);
-
-                        if (isClickInsideCircle(x, y, playerX, playerY, circleRadius)) {
-                            // Show color picker for the clicked player
-                            showColorPicker(player);
-                        }
+                    if (isClickInsideCircle(x, y, playerX, playerY, circleRadius)) {
+                        // Show color picker for the clicked player
+                        showColorPicker(player);
                     }
-
-
                 }
-            };
-            stage.addListener(colorPickerListener);
-
+            }
+        };
+        stage.addListener(colorPickerListener);
     }
 
-    private boolean checkPlayerTakenColour(String hex){
-        for (Player player : players) {
-            if(player.color.equals(Color.valueOf(hex))){
-
+    private boolean checkPlayerTakenColour(String hex) {
+        for (Player player : PlayerManager.getInstance().getPlayers()) {
+            if (player.color.equals(Color.valueOf(hex))) {
                 return true;
             }
-        }return false;
+        }
+        return false;
     }
 
     private boolean isClickInsideCircle(float clickX, float clickY, float circleX, float circleY, float radius) {
@@ -238,9 +257,6 @@ public class GameSetup implements Screen {
         } else {
             colorTexture4 = new Texture(Gdx.files.internal("ui/colourPicker4.png"));
         }
-
-        // Helper method to create ImageButton styles
-
 
         // Create image buttons for the textures
         ImageButton colorButton1 = new ImageButton(createButtonStyle(colorTexture1));
@@ -280,7 +296,6 @@ public class GameSetup implements Screen {
                     player.color = Color.valueOf("ff29be");
                 }
                 colorPickerDialog.hide();
-
             }
         });
 
@@ -297,13 +312,12 @@ public class GameSetup implements Screen {
         colorPickerDialog.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if(!colorPickerDialog.isVisible()){
+                if (!colorPickerDialog.isVisible()) {
                     colorTexture1.dispose();
                     colorTexture2.dispose();
                     colorTexture3.dispose();
                     colorTexture4.dispose();
                 }
-
             }
         });
     }
@@ -324,6 +338,7 @@ public class GameSetup implements Screen {
             1f                           // Alpha channel (fully opaque)
         );
 
+
     }
 
     @Override
@@ -333,8 +348,8 @@ public class GameSetup implements Screen {
 
         // Draw the shapes (circles)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (int i = 0; i < players.size(); i++) {
-            Player player = players.get(i);
+        for (int i = 0; i < PlayerManager.getInstance().getPlayers().size(); i++) {
+            Player player = PlayerManager.getInstance().getPlayers().get(i);
             Vector2 position = playerPositions.get(i); // Get the position for this player
             shapeRenderer.setColor(player.getColor());
             shapeRenderer.circle(position.x, position.y, circleRadius); // Draw the circle at the specified position
@@ -351,6 +366,18 @@ public class GameSetup implements Screen {
         }
     }
 
+    public void resetGame() {
+        // Reset players
+        PlayerManager.getInstance().reset();
+
+        // Reset nodes
+
+    }
+
+    public void resetGameState() {
+
+    }
+
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
@@ -358,8 +385,7 @@ public class GameSetup implements Screen {
 
     @Override
     public void hide() {
-        stage.dispose();
-        shapeRenderer.dispose();
+        dispose(); // Dispose of resources when the screen is hidden
     }
 
     @Override
@@ -372,6 +398,18 @@ public class GameSetup implements Screen {
 
     @Override
     public void dispose() {
-
+        Gdx.app.log("DEBUG", "GameSetup disposed");
+        if (stage != null) {
+            stage.dispose();
+            stage = null; // Set to null to avoid double disposal
+        }
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+            shapeRenderer = null; // Set to null to avoid double disposal
+        }
+        if (skin != null) {
+            skin.dispose();
+            skin = null; // Set to null to avoid double disposal
+        }
     }
 }

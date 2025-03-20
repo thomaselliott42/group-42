@@ -1,17 +1,24 @@
 package com.main;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
-import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
-import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
+import com.badlogic.gdx.graphics.g3d.environment.ShadowMap;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
+import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.Gdx;
+import com.main.tooltips.TooltipPosition;
+
+
+import static com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute.AmbientLight;
+
 
 public class Dice {
     private ModelInstance diceInstance;
@@ -24,6 +31,9 @@ public class Dice {
     private int faceValue;
     private boolean visible = false;
     private boolean alreadyRolled = false;
+
+    private DirectionalLight directionalLight;
+    private ShadowMap shadowMap;  // Used for shadow mapping
 
     public Dice(Texture[] textures) {
         this.faceTextures = textures;
@@ -95,7 +105,7 @@ public class Dice {
 
         // Set up environment lighting
         environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
+        environment.set(new ColorAttribute(AmbientLight, 0.8f, 0.8f, 0.8f, 1f));
 
         isRolling = false;
         faceValue = 1; // Initially showing face 1
@@ -158,8 +168,8 @@ public class Dice {
     public void update(float delta) {
         if (isRolling) {
             // Reduce rolling time
-            rotationTimeLeft -= delta;
-
+            //rotationTimeLeft -= delta;
+            rotationTimeLeft = 0;
             // Apply random rotations
             diceInstance.transform.rotate(Vector3.X, rotationSpeedX * delta);
             diceInstance.transform.rotate(Vector3.Y, rotationSpeedY * delta);
@@ -219,7 +229,10 @@ public class Dice {
     }
 
     public void render(ModelBatch modelBatch) {
+
         modelBatch.render(diceInstance, environment);
+
+        // Now render the shadows in the shadow map
     }
 
     public int getFaceValue() {

@@ -91,7 +91,7 @@ public class PlayerRequestScreen implements Screen {
 
                     TextButton playerButton = new TextButton(playerName, new TextButton.TextButtonStyle(null, null, null, font));
                     playerButton.getLabel().setFontScale(2f);
-                    playerButton.setColor(player.getColor());
+                    playerButton.setColor(player.getColour());
 
                     playerButton.addListener(new ClickListener() {
                         @Override
@@ -117,7 +117,7 @@ public class PlayerRequestScreen implements Screen {
 
                     TextButton playerButton = new TextButton(playerName, new TextButton.TextButtonStyle(null, null, null, font));
                     playerButton.getLabel().setFontScale(2f);
-                    playerButton.setColor(player.getColor());
+                    playerButton.setColor(player.getColour());
 
                     playerButton.addListener(new ClickListener() {
                         @Override

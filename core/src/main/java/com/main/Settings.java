@@ -113,7 +113,7 @@ public class Settings implements Screen {
         stage.addActor(table);
 
         // Music Volume Slider
-        Label musicLabel = new Label("Music Volume", skin);
+        Label musicLabel = new Label("Ambience Volume", skin);
         musicSlider = new Slider(0, 1, 0.01f, false, skin);
         musicSlider.setValue(musicVolume);
         musicSlider.addListener(new ChangeListener() {
@@ -174,6 +174,28 @@ public class Settings implements Screen {
             }
         });
 
+        TextButton removeWeatherEffects = new TextButton("Remove Weather Effects", skin);
+        if(!GameState.getInstance().isRemoveWeatherEffects()){
+            // button colour
+            removeWeatherEffects.setColor(Color.RED); // Changes button color
+        }else{
+            removeWeatherEffects.setColor(Color.GREEN);
+        }
+        removeWeatherEffects.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                GameState.getInstance().setRemoveWeatherEffects();
+
+                if(!GameState.getInstance().isRemoveWeatherEffects()){
+                    removeWeatherEffects.setColor(Color.RED); // Changes button color
+                }else{
+                    removeWeatherEffects.setColor(Color.GREEN);
+                    soundManager.stopMusic("rainSound");
+                    soundManager.stopMusic("stormSound");
+                }
+            }
+        });
+
         // Save Button
         TextButton saveButton = new TextButton("Save", skin);
         saveButton.addListener(new ChangeListener() {
@@ -183,22 +205,10 @@ public class Settings implements Screen {
             }
         });
 
-        CheckBox backgroundMusicCheckBox = new CheckBox("Background Music", skin);
-        backgroundMusicCheckBox.setChecked(soundManager.isMusicPlaying("background")); // Set state based on current music playing status
 
-        backgroundMusicCheckBox.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent changeEvent, Actor actor) {
-                if (backgroundMusicCheckBox.isChecked()) {
-                    SoundManager.getInstance().playMusic("background", true); // Play with looping
-                } else {
-                    SoundManager.getInstance().stopMusic("background");
-                }
-            }
-        });
 
         CheckBox colourBlindMode = new CheckBox("Colour Blind Mode", skin);
-        colourBlindMode.setChecked(GameState.getInstance().isColourBlind()); // Set state based on current music playing status
+        colourBlindMode.setChecked(GameState.getInstance().isColourBlind());
 
         colourBlindMode.addListener(new ChangeListener() {
             @Override
@@ -219,6 +229,17 @@ public class Settings implements Screen {
             }
         });
 
+        // Quit Game
+            TextButton quitButton = new TextButton("Quit Game", skin);
+            quitButton.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                    ((Game) Gdx.app.getApplicationListener()).setScreen(new GameEndScreen(false));
+                }
+            });
+
+
+
         // Back Button
         TextButton backButton = new TextButton("Back", skin);
         backButton.addListener(new ChangeListener() {
@@ -235,7 +256,6 @@ public class Settings implements Screen {
         table.row();
         table.add(musicSlider).width(300).pad(10);
         table.row();
-        table.add(backgroundMusicCheckBox).pad(10);
         table.add(colourBlindMode).pad(10);
         table.row();
         table.add(sfxLabel).pad(10);
@@ -247,10 +267,15 @@ public class Settings implements Screen {
         table.add(textScaleSlider).width(300).pad(10);  // Add text scale slider
         table.row();
         table.add(removeToolTips).width(300).pad(10);
+        table.add(removeWeatherEffects).width(300).pad(10);
         table.row();
         table.add(stopTutorial).width(300).pad(10);
         table.row();
         table.add(info);
+        table.row();
+        if(PlayerManager.getInstance().getPlayers().size() > 0){
+            table.add(quitButton);
+        }
         table.row();
         table.add(backButton).pad(20);
 

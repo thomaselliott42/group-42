@@ -11,9 +11,14 @@ dependencies {
   api "com.github.tommyettinger:libgdx-texturepacker:$texturePackerOnlyVersion"
   api "de.golfgl.gdxcontrollerutils:gdx-controllerutils-scene2d:$controllerScene2DVersion"
 
+  implementation "org.junit.jupiter:junit-jupiter-api:5.9.0"
+  implementation "org.junit.jupiter:junit-jupiter-engine:5.9.0"
+
   api "com.fasterxml.jackson.core:jackson-databind:2.14.0"  // For JSON processing
   api "com.fasterxml.jackson.core:jackson-core:2.14.0"      // Core dependency
   api "com.fasterxml.jackson.core:jackson-annotations:2.14.0"  // Optional for annotations support
+
+
 
   if(enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"

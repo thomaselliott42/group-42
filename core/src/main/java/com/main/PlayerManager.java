@@ -21,6 +21,7 @@ public class PlayerManager {
     }
 
     public Player getCurrentPlayer(){
+
         return players.get(currentPlayerIndex);
     }
 

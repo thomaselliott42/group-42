@@ -90,6 +90,7 @@ public class TaskStartConfirmationScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 // Start the task
+                SoundManager.getInstance().playSound("startingTaskSound");
                 onConfirm.run();
                 ((Game) Gdx.app.getApplicationListener()).setScreen(previousScreen);
             }
@@ -124,7 +125,7 @@ public class TaskStartConfirmationScreen implements Screen {
 
         // Draw the background
         batch.begin();
-        batch.setColor(100, 0, 0, 0.7f); // Dark semi-transparent
+        batch.setColor(0, 0, 0, 0.7f); // Dark semi-transparent
         batch.draw(whiteTexture, Gdx.graphics.getWidth() / 2f - 400, Gdx.graphics.getHeight() / 2f - 150, 900, 400);
         batch.setColor(1, 1, 1, 1); // Reset color
         batch.end();

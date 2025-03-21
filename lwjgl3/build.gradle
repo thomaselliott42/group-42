@@ -55,7 +55,7 @@ run {
 jar {
 // sets the name of the .jar file this produces to the name of the game or app, with the version after.
   archiveBaseName.set("makersvalley-saver") // Change this to your desired name
-  archiveVersion.set("0.2")
+  archiveVersion.set("1.0")
 
 // the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
   duplicatesStrategy(DuplicatesStrategy.EXCLUDE)

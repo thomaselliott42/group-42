@@ -29,12 +29,13 @@ public class PlayerTaskHelpScreen implements Screen {
     private Task task; // The task to be assigned
     private List<Player> eligiblePlayers; // List of players eligible to take the task
     private Texture whiteTexture;
+    private Player currentPlayer;
 
-    public PlayerTaskHelpScreen(Screen previousScreen, Task task) {
+    public PlayerTaskHelpScreen(Screen previousScreen, Task task, Player currentPlayer) {
         this.task = task;
         //this.onConfirm = onConfirm;
 
-
+        this.currentPlayer = currentPlayer;
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.WHITE);
         pixmap.fill();
@@ -46,6 +47,11 @@ public class PlayerTaskHelpScreen implements Screen {
         font = new BitmapFont();
         font.getData().setScale(1.5f); // Increase font size
         font.setColor(Color.WHITE);
+
+        // Deduct the next payment
+        int rTurns = task.getRemainingTurns();
+        double moneyCost = task.getOwner().getActiveTask().getResourceAmount("Money") / task.getOwner().getActiveTask().getTime();
+
 
         // Create a table to organize the content
         Table mainTable = new Table();
@@ -71,13 +77,18 @@ public class PlayerTaskHelpScreen implements Screen {
         mainTable.add(taskNameLabel).left().width(400).row(); // Set a fixed width for the title
 
         // Add the task description (white)
-        String description = task.getDescription()
-            .replace("{m}", task.getResourceAmountString("Money"))
-            .replace("{p}", task.getResourceAmountString("People"));
+        String description = "This will cost you " + moneyCost;
+
         Label descriptionLabel = new Label(description, new Label.LabelStyle(font, Color.WHITE));
         descriptionLabel.setAlignment(Align.left);
         descriptionLabel.setWrap(true); // Enable wrapping for the description
         mainTable.add(descriptionLabel).left().width(400).row(); // Set a fixed width for the description
+
+        String personalCost = "and will reduce there turn timer down from " + task.getRemainingTurns() + " to " + (task.getRemainingTurns() - 1) + " turns";
+        Label personalCostLabel = new Label(personalCost, new Label.LabelStyle(font, Color.WHITE));
+        descriptionLabel.setAlignment(Align.left);
+        descriptionLabel.setWrap(true); // Enable wrapping for the description
+        mainTable.add(personalCostLabel).left().width(400).row(); // Set a fixed width for the description
 
         // Add Confirm and Cancel buttons
         TextButton confirmButton = new TextButton("Confirm", new TextButton.TextButtonStyle(null, null, null, font));
@@ -86,6 +97,10 @@ public class PlayerTaskHelpScreen implements Screen {
         confirmButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+
+                currentPlayer.rand.deductAmount(moneyCost);
+                currentPlayer.updateAmountDonated(moneyCost);
+                task.getOwner().progressTaskPayedOtherPlayer(task);
 
                 ((Game) Gdx.app.getApplicationListener()).setScreen(previousScreen);
             }
@@ -107,6 +122,8 @@ public class PlayerTaskHelpScreen implements Screen {
         // Add the main table to the stage
         stage.addActor(mainTable);
     }
+
+
 
     @Override
     public void show() {

@@ -40,7 +40,7 @@ public class TutorialManager {
         tutorialSets = new HashMap<>();
         active = false;
 
-        off = true; // Remember to reset
+        off = false; // Remember to reset
 
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.WHITE);

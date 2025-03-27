@@ -7,9 +7,6 @@ dependencies {
   api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
   api "com.badlogicgames.gdx:gdx:$gdxVersion"
-  api "com.github.lyze237:gdx-FlexBox:$flexBoxVersion"
-  api "com.github.tommyettinger:libgdx-texturepacker:$texturePackerOnlyVersion"
-  api "de.golfgl.gdxcontrollerutils:gdx-controllerutils-scene2d:$controllerScene2DVersion"
 
   implementation "org.junit.jupiter:junit-jupiter-api:5.9.0"
   implementation "org.junit.jupiter:junit-jupiter-engine:5.9.0"

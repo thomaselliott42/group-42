@@ -5,7 +5,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -88,11 +87,10 @@ public class ChanceSquareScreen implements Screen {
     @Override
     public void render(float delta) {
 
-        // Draw semi-transparent background box
         batch.begin();
-        batch.setColor(0, 0, 0, 0.7f); // Dark semi-transparent
+        batch.setColor(0, 0, 0, 0.7f);
         batch.draw(whiteTexture, Gdx.graphics.getWidth() / 2f - 300, Gdx.graphics.getHeight() / 2f - 150, 800, 400);
-        batch.setColor(1, 1, 1, 1); // Reset color
+        batch.setColor(1, 1, 1, 1);
         batch.end();
 
         // Draw the UI stage

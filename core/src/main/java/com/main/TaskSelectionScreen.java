@@ -79,6 +79,7 @@ public class TaskSelectionScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 onConfirm.run(); // Run the confirmation logic
+                SoundManager.getInstance().playSound("click");
                 ((Game) Gdx.app.getApplicationListener()).setScreen(previousScreen);
             }
         });
@@ -107,10 +108,11 @@ public class TaskSelectionScreen implements Screen {
 
     @Override
     public void render(float delta) {
+
         Tooltip.getInstance().clear();
 
         batch.begin();
-        batch.setColor(100, 0, 0, 0.7f); // Dark semi-transparent
+        batch.setColor(0, 0, 0, 0.2f); // Dark semi-transparent
         batch.draw(whiteTexture, Gdx.graphics.getWidth() / 2f - 400, Gdx.graphics.getHeight() / 2f - 150, 900, 400);
         batch.setColor(1, 1, 1, 1); // Reset color
         batch.end();

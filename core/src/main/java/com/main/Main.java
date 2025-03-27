@@ -15,9 +15,10 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Null;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.main.player.playerTab;
 import com.main.tooltips.*;
 import com.main.weatherSystem.WeatherManager;
 
@@ -62,11 +63,20 @@ public class Main implements Screen {
     private float weatherAlertTimer; // Timer to control how long the alert is displayed
     private final float WEATHER_ALERT_DURATION = 3f; // Duration of the alert in seconds
 
+
+    // makers
+    private boolean makersRefill = false;
+    private float makersZarRefillAmount = 75000;
+    private float makersPeopleRefillAmount = 50;
+    private float makerAlertTimer; // Timer to control how long the alert is displayed
+
+
+
     // Variables for camera movement
     private float dragStartX, dragStartY;
     private boolean dragging;
 
-    public boolean teleport = true;
+    public boolean teleport = false;
     private int turn;
     private int currentMoves;
     private int maxMoves;
@@ -125,13 +135,11 @@ public class Main implements Screen {
     private PerspectiveCamera camera3d;
 
     // Makers center setup
-    private MakersCenter makersCenter;
-    private playerTab tab;
 
-    // Test Bridge
-    Node n1=null;
-    Node n2=null;
-    Boolean selectingNode = false;
+    //weather particles
+    private List<RainParticle> particles = new ArrayList<>();
+    ThunderstormEffect thunderstormEffect;
+
 
     public Main(List<Node> nodes) {
         this.nodes = nodes;
@@ -140,10 +148,27 @@ public class Main implements Screen {
 
         // sound
         SoundManager.getInstance().loadSound("moving", "audio/moving.mp3");
-        SoundManager.getInstance().loadMusic("background", "audio/backgroundMusic.mp3");
-        //SoundManager.getInstance().playMusic("background", true);
+        SoundManager.getInstance().loadSound("click", "audio/click.mp3");
+        SoundManager.getInstance().loadSound("notification", "audio/notification.mp3");
+
+
+        SoundManager.getInstance().loadSound("taskFinished", "audio/taskFinished1.mp3");
+        SoundManager.getInstance().loadSound("startingTaskSound", "audio/startingTaskSound.mp3");
+        SoundManager.getInstance().loadMusic("rainSound", "audio/rainSound.mp3");
+        SoundManager.getInstance().loadMusic("stormSound", "audio/stormSound.mp3");
+        SoundManager.getInstance().loadMusic("snowfallSound", "audio/snowfallSound.mp3");
+        SoundManager.getInstance().loadMusic("windSound", "audio/windSound.mp3");
+
+        Texture particleTexture = new Texture(Gdx.files.internal("ui/rain.png"));
+
+
+        for (int i = 0; i < 500; i++) {
+            // Create a new IsoParticle and add it to the list
+            particles.add(new RainParticle(100, 200, 150, particleTexture));
+        }
 
         GameState.getInstance().setCurrentScreen("MS");
+
         seasons = new ArrayList<>();
         seasons.add("Spring");
         seasons.add("Summer");
@@ -156,7 +181,6 @@ public class Main implements Screen {
        // Gdx.input.setInputProcessor(renderer.getStage());
         // Initialize the playerTab
 
-        tab = new playerTab(players.get(0)); // Pass the first player (or current player)
 
     }
 
@@ -173,6 +197,7 @@ public class Main implements Screen {
         font.setColor(Color.WHITE);
 
         setupCameras();
+        thunderstormEffect = new ThunderstormEffect(camera, "Clear", nodes);
 
         renderer = new Renderer(camera, uiCamera, viewport, circleRadius, players.get(0), this);  // Pass 'this' (Main) to Renderer
     }
@@ -197,14 +222,9 @@ public class Main implements Screen {
 
         // load tutorials
         TutorialManager.getInstance().registerTutorial("overview",
-            List.of("ui/tutorial/overview.png", "ui/tutorial/overview2.png"));
+            List.of("ui/tutorial/howToPlay.png", "ui/tutorial/howToPlay2.png", "ui/tutorial/howToPlay3.png","ui/tutorial/howToPlay4.png"));
 
-        TutorialManager.getInstance().registerTutorial("weather",List.of("ui/tutorial/weather.png"));
-
-        TutorialManager.getInstance().registerTutorial("makersCenter",List.of("ui/tutorial/makersCenter.png", "ui/tutorial/makersCenter2.png"));
-
-        TutorialManager.getInstance().registerTutorial("gameOverWin",List.of("ui/tutorial/makersCenter.png", "ui/tutorial/makersCenter2.png"));
-        TutorialManager.getInstance().registerTutorial("gameOverFail",List.of("ui/tutorial/makersCenter.png", "ui/tutorial/makersCenter2.png") );
+        TutorialManager.getInstance().registerTutorial("weather",List.of("ui/tutorial/weather.png", "ui/tutorial/weather2.png"));
 
         // load tasks
         task = ResourceLoader.loadTask();
@@ -219,7 +239,7 @@ public class Main implements Screen {
         // Debug: Check the starting node and other nodes
         Node startingNode = nodes.get(0);
         Gdx.app.log("Debug", "Starting Node Task: " + startingNode.getTask()); // Should be null
-        Gdx.app.log("Debug", "Starting Node Color: " + startingNode.color); // Should be yellow
+        Gdx.app.log("Debug", "Starting Node Colour: " + startingNode.colour); // Should be yellow
 
         // Debug: Check all tasks assigned to nodes
         for (int i = 1; i < nodes.size(); i++) {
@@ -243,11 +263,11 @@ public class Main implements Screen {
         }
 
         Tooltip.getInstance().addTooltip("A", "S","Settings", "ui/toolTips/keyboard_key_p.png", TooltipPosition.BOTTOM_RIGHT, false, false);
-        Tooltip.getInstance().addTooltip("MS","H","Help","ui/toolTips/keyboard_key_h.png", TooltipPosition.BOTTOM_RIGHT, false, false);
 
 
         Tooltip.getInstance().addTooltip("MS", "W","Weather Info", "ui/toolTips/keyboard_key_w.png", TooltipPosition.BOTTOM_RIGHT, false, false);
-        Tooltip.getInstance().addTooltip("MS","MC","Enter Makers Center", "ui/toolTips/mouse_right_button.png", TooltipPosition.BOTTOM_RIGHT);
+        Tooltip.getInstance().addTooltip("MS","H","Help","ui/toolTips/keyboard_key_h.png", TooltipPosition.BOTTOM_RIGHT, false, false);
+
         Tooltip.getInstance().addTooltip("MS","DR","Click on the dice to roll", TooltipPosition.CLICK_ROLL, true, true);
         Tooltip.getInstance().addTooltip("MS","DP","Click on dice to play",TooltipPosition.CLICK_ROLL, true, true);
 
@@ -255,8 +275,8 @@ public class Main implements Screen {
         Tooltip.getInstance().addTooltip("MS","AT","Acquire task", "ui/toolTips/keyboard_key_s.png", TooltipPosition.BOTTOM_RIGHT);
         Tooltip.getInstance().addTooltip("MS","GT","Give task", "ui/toolTips/keyboard_key_g.png", TooltipPosition.BOTTOM_RIGHT);
         Tooltip.getInstance().addTooltip("MS","HT","Help Task", "ui/toolTips/keyboard_key_f.png", TooltipPosition.BOTTOM_RIGHT);
+        Tooltip.getInstance().addTooltip("MS","MR","Collect Resources", "ui/toolTips/keyboard_key_c.png", TooltipPosition.BOTTOM_RIGHT);
 
-        Tooltip.getInstance().addTooltip("MC","CS","Start", TooltipPosition.CLICK_ROLL, false, false);
         Tooltip.getInstance().addTooltip("AMC","EMC","Leave","ui/toolTips/keyboard_key_escape.png", TooltipPosition.BOTTOM_RIGHT, false, false);
 
         // Steps :
@@ -327,34 +347,15 @@ public class Main implements Screen {
         dice.setIsVisible(true);
     }
 
-    public void renderWeatherAlert(String weatherAlertText) {
-        batch.begin();
-        font.getData().setScale(2f); // Increase font size
-        font.setColor(Color.WHITE);
 
-        // Calculate the position to center the text
-        GlyphLayout layout = new GlyphLayout(font, weatherAlertText);
-        float x = (Gdx.graphics.getWidth() - layout.width) / 2;
-        float y = (Gdx.graphics.getHeight() + layout.height) / 2;
-
-        // Draw the alert text
-        font.draw(batch, weatherAlertText, x, y);
-        font.getData().setScale(1f); // Reset font size
-        batch.end();
-    }
 
     public void setupDice(){
         modelBatch = new ModelBatch();
 
-        String diceSkin = "flowerPower";
-        if(GameState.getInstance().isColourBlind()){
-            diceSkin = "colourBlind";
-        }
-
         // Load textures for each dice face
         Texture[] diceTextures = new Texture[6];
         for (int i = 0; i < 6; i++) {
-            diceTextures[i] = new Texture("ui/dice/"+ diceSkin +"/dice_face_" + (i + 1) + ".png"); // dice1.png to dice6.png
+            diceTextures[i] = new Texture("ui/dice/dice_face_" + (i + 1) + ".png"); // dice1.png to dice6.png
         }
 
         // Create the dice
@@ -364,15 +365,15 @@ public class Main implements Screen {
         camera3d = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         // Position the camera in front of the dice, facing the front face
-        camera3d.position.set(0f, 0f, 3f);  // Move the camera along the Z-axis (3 units away from the dice)
-        camera3d.lookAt(0f, 0f, 0f);        // Make the camera look at the center of the dice
+        camera3d.position.set(0f, 0f, 3f);
+        camera3d.lookAt(0f, 0f, 0f);
 
         camera3d.near = 0.1f;
         camera3d.far = 100f;
         camera3d.update();
-
-        TutorialManager.getInstance().startTutorial("overview"); // Shows movement tutorial
+        TutorialManager.getInstance().startTutorial("overview");
         TutorialManager.getInstance().addToQueue("weather");
+
     }
 
     public Boolean checkLinkedNode(Node currentNode) {
@@ -396,6 +397,13 @@ public class Main implements Screen {
     @Override
     public void render(float delta) {
 
+
+        if(GameState.getInstance().isForceColourUpdate()){
+            for(Node node : nodes){
+                node.updateColour();
+            }
+            GameState.getInstance().setForceColourUpdate();
+        }
         // Render the main game screen
             // Existing rendering logic for the main game screen
             Tooltip.getInstance().clear();
@@ -405,19 +413,17 @@ public class Main implements Screen {
         // Check if any player has run out of resources
 
         for (Player player : players) {
-
             if (player.getRand().getAmount() <= 0 || player.getRand2().getAmount() <= 0) {
-
                 // Trigger game-over screen
-
-                ((Game) Gdx.app.getApplicationListener()).setScreen(new GameOverScreen(this, player));
-
+                ((Game) Gdx.app.getApplicationListener()).setScreen(new GameEndScreen(false));
                 return; // Stop rendering the current screen
-
             }
-
         }
 
+       if(GameState.getInstance().getCompletedAllCategories() == 4){
+           ((Game) Gdx.app.getApplicationListener()).setScreen(new GameEndScreen(true));
+
+       }
 
 
         if (financeObjectiveCanStart && !hasFinanceObjectiveStarted) {
@@ -483,11 +489,67 @@ public class Main implements Screen {
             }
 
             renderer.renderBoard(nodes);
+
+            batch.begin();
+
+        batch.setProjectionMatrix(camera.combined);
+
+        if(!GameState.getInstance().isRemoveWeatherEffects()){
+            if (currentWeather != null && (currentWeather.equals("Rainy") || currentWeather.equals("Snow"))) {
+                if(!SoundManager.getInstance().isMusicPlaying("rainSound")){
+                    SoundManager.getInstance().playMusic("rainSound", false);
+                }
+                batch.setProjectionMatrix(uiCamera.combined);
+                for (RainParticle particle : particles) {
+                    particle.update(delta);
+                    particle.draw(batch);
+                }
+            }else{
+                SoundManager.getInstance().pauseMusic("rainSound");
+            }
+
+            if (currentWeather != null &&currentWeather.equals("Thunderstorms")) {
+                if(!SoundManager.getInstance().isMusicPlaying("stormSound")){
+                    SoundManager.getInstance().playMusic("stormSound", false);
+                }
+
+                    thunderstormEffect.update(delta, currentWeather);
+                    thunderstormEffect.render(batch, renderer.camera.zoom);
+
+            }else{
+                SoundManager.getInstance().pauseMusic("stormSound");
+            }
+            if (currentWeather != null &&currentWeather.equals("Cloudy") ) {
+                if(!SoundManager.getInstance().isMusicPlaying("windSound")){
+                    SoundManager.getInstance().playMusic("windSound", false);
+                }
+                thunderstormEffect.update(delta, currentWeather);
+                thunderstormEffect.render(batch, renderer.camera.zoom);
+            }else{
+                SoundManager.getInstance().stopMusic("windSound");
+
+            }
+            if (currentWeather != null &&currentWeather.equals("Partly Cloudy")) {
+                if(!SoundManager.getInstance().isMusicPlaying("windSound")){
+                    SoundManager.getInstance().playMusic("windSound", false);
+                }
+                thunderstormEffect.update(delta, currentWeather);
+                thunderstormEffect.render(batch, renderer.camera.zoom);
+            }else{
+                SoundManager.getInstance().stopMusic("windSound");
+
+            }
+        }
+
+        batch.setProjectionMatrix(uiCamera.combined);
+
+        batch.end();
+
             renderer.renderUI(turn, maxMoves, currentMoves, currentWeather, currentSeason, currentNode, attemptedTaskSelection);
 
             if (isSpaceBarHeld) {
                 float progress = Math.min(spaceBarHeldTime / requiredHoldTime, 1);
-                renderer.renderProgressBar(progress, players.get(turn).getColor());
+                renderer.renderProgressBar(progress, players.get(turn).getColour());
             } else {
                 batch.begin();
                 font.draw(batch, "Hold space-bar to end turn", (Gdx.graphics.getWidth() - 200) / 2, 20);
@@ -519,6 +581,10 @@ public class Main implements Screen {
                 weatherAlertTimer -= delta;
                 renderer.renderWeatherAlert(weatherAlertText);
             }
+        if(makerAlertTimer > 0){
+            makerAlertTimer -= delta;
+            renderer.renderMakersAlert();
+        }
 
     }
 
@@ -538,6 +604,8 @@ public class Main implements Screen {
 
     private void updatePlayerAnimation() {
         if (animatingPlayerMoving) {
+
+
             players.get(turn).playerCircleX = MathUtils.lerp(players.get(turn).playerCircleX, players.get(turn).playerTargetX, moveSpeed * Gdx.graphics.getDeltaTime());
             players.get(turn).playerCircleY = MathUtils.lerp(players.get(turn).playerCircleY, players.get(turn).playerTargetY, moveSpeed * Gdx.graphics.getDeltaTime());
 
@@ -621,6 +689,8 @@ public class Main implements Screen {
             mousePos.y >= node.y && mousePos.y <= node.y + node.size) {
 
             if(teleport){
+                SoundManager.getInstance().playSound("moving", 0.3f);
+
                 moveToNode(node);
             }
             Player currentPlayer = players.get(turn);
@@ -644,11 +714,32 @@ public class Main implements Screen {
         return false;
     }
 
+
+    private boolean notSingleAttached(Node currentNode, Node targetNode){
+
+        int counter = 0;
+        for(Node node : nodes){
+            if(node.links.contains(targetNode)){
+                counter++;
+            }
+        }
+
+        Gdx.app.log("DEBUG", "Node " + counter + " not single attached");
+
+        if(counter == 0){
+            return true;
+        }else{
+            return false;
+
+        }
+    }
+
     private void moveToNode(Node targetNode) {
         Player currentPlayer = players.get(turn);
 
         // Check if the target node has already been visited
-        if (currentPlayer.hasVisited(targetNode)) {
+        // Check if the current node is only attached to one other node
+        if (!notSingleAttached(currentNode, targetNode) && currentPlayer.hasVisited(targetNode)) {
             Gdx.app.log("DEBUG", "Cannot move back to a visited node.");
             return; // Prevent the player from moving back
         }
@@ -672,6 +763,7 @@ public class Main implements Screen {
 
         // Clear the weather alert text when the user makes a move
         weatherAlertTimer = 0;
+
 
         if (debugWindow) {
             renderer.renderDebugTravelLine(currentPlayer);
@@ -703,53 +795,27 @@ public class Main implements Screen {
         handleDice();
 
         // Task's
-        handleAttachTask();
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
-            handleTaskRequest();
-        }
-
-        if(Gdx.input.isKeyJustPressed(Input.Keys.L)){
-            ((Game) Gdx.app.getApplicationListener()).setScreen(new GameEndScreen());
-
-        }
-
-        if(Gdx.input.isKeyJustPressed(Input.Keys.F)){
-            handlePlayerTaskHelpScreen();
-        }
-
-        // In Main.java's handleInput() method
-        if(Gdx.input.isKeyJustPressed(Input.Keys.Q)){
-            Player currentPlayer = PlayerManager.getInstance().getCurrentPlayer();
-
-            // Add all Educational tasks to player
-            for(Task t : task) {
-                if(t.getCategory().equals("Educational") && !currentPlayer.getTasks().contains(t)) {
-                    // Bypass normal task acquisition rules
-                    currentPlayer.addTask(t);
-                    t.setTaken(true);
-                    t.setOwner(currentPlayer);
-                    selectedEducationTasks.add(t);
-
-                    // Update node color if needed
-                    for(Node node : nodes) {
-                        if(node.getTask() == t) {
-                            node.updateColour();
-                        }
-                    }
-                }
+        if(currentMoves >= maxMoves){
+            handleAttachTask();
+            if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
+                handleTaskRequest();
             }
+            if(Gdx.input.isKeyJustPressed(Input.Keys.F)){
+                handlePlayerTaskHelpScreen();
+            }
+        }
 
+        if(Gdx.input.isKeyJustPressed(Input.Keys.C) && makersRefill && currentNode.isJobCentre){
+            players.get(turn).getRand().addAmount(makersZarRefillAmount);
+            players.get(turn).getRand2().addAmount(makersPeopleRefillAmount);
+            makersRefill = false;
 
-
-            renderer.updatePlayerTab(currentPlayer);
         }
 
         handlePlayerTaskScreen();
 
         handleOptions();
-
-        handleMakersCenter();
 
         handleToolTipInput();
 
@@ -763,7 +829,7 @@ public class Main implements Screen {
                         !currentPlayer.getCurrentCategory().equals(currentNode.getTask().getCategory()))) {
             Gdx.app.log("DEBUG", "Help screen");
             Screen currentScreen = ((Game) Gdx.app.getApplicationListener()).getScreen();
-            ((Game) Gdx.app.getApplicationListener()).setScreen(new PlayerTaskHelpScreen(currentScreen, currentNode.getTask()));
+            ((Game) Gdx.app.getApplicationListener()).setScreen(new PlayerTaskHelpScreen(currentScreen, currentNode.getTask(), currentPlayer));
         }
 
     }
@@ -783,12 +849,6 @@ public class Main implements Screen {
         boolean isObjectiveClaimed = true;
         if(currentNode.getTask() != null){
             isObjectiveClaimed = objectiveOwners.containsKey(currentNode.getTask().getCategory()) && objectiveOwners.get(currentNode.getTask().getCategory()) != players.get(turn);
-        }
-        if (currentNode.isJobCentre) {
-            // make an enum for the icons
-            Tooltip.getInstance().setVisible("MC", true);
-        }else{
-            Tooltip.getInstance().setVisible("MC", false);
         }
         if (!dice.isAlreadyRolled() && dice.getIsVisible() && !dice.isRolling()) {
             Tooltip.getInstance().setVisible("DR", true);
@@ -842,6 +902,11 @@ public class Main implements Screen {
             Tooltip.getInstance().setVisible("HT", false);
         }
 
+        if (makersRefill && currentNode.isJobCentre) {
+            Tooltip.getInstance().setVisible("MR", true);
+        }else{
+            Tooltip.getInstance().setVisible("MR", false);
+        }
     }
 
     private void handleOptions(){
@@ -866,21 +931,6 @@ public class Main implements Screen {
                 TutorialManager.getInstance().setOff();
             }
             TutorialManager.getInstance().startTutorial("overview");
-        }
-
-    }
-
-    private void handleMakersCenter() {
-        if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT) && currentNode.isJobCentre) {
-            // If MakersCenter hasn't been initialised, create it once
-
-            if (makersCenter == null) {
-                Screen currentScreen = ((Game) Gdx.app.getApplicationListener()).getScreen();
-                makersCenter = new MakersCenter(currentScreen);
-            }
-
-            // Switch to the MakersCenter screen
-            ((Game) Gdx.app.getApplicationListener()).setScreen(makersCenter);
         }
 
     }
@@ -925,7 +975,7 @@ public class Main implements Screen {
                     Gdx.app.log("Weather", "Max Moves Modifier: " + maxMovesModifier);
 
                     // Set maxMoves to the rolled face value + modifier
-                    maxMoves = faceValue + maxMovesModifier + 1000;
+                    maxMoves = faceValue + maxMovesModifier;
                     Gdx.app.log("Game", "Adjusted Max Moves: " + maxMoves);
 
                     // Ensure maxMoves doesn't go below a minimum value (e.g., 1)
@@ -949,9 +999,9 @@ public class Main implements Screen {
                 // Add the resources to the player's resources
                 for (Resource resource : chanceTask.getResources()) {
                     if (resource.getType().equals("Money")) {
-                        PlayerManager.getInstance().getCurrentPlayer().getRand().addAmount(resource.getAmount());
+                        players.get(turn).getRand().addAmount(resource.getAmount());
                     } else if (resource.getType().equals("People")) {
-                        PlayerManager.getInstance().getCurrentPlayer().getRand2().addAmount(resource.getAmount());
+                        players.get(turn).getRand2().addAmount(resource.getAmount());
                     }
                 }
 
@@ -971,8 +1021,6 @@ public class Main implements Screen {
 
     private void handleAttachTask() {
         Player currentPlayer = players.get(turn);
-
-
             if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
                 attemptedTaskSelection = true;
 
@@ -1001,7 +1049,7 @@ public class Main implements Screen {
                         }
 
                         // If the objective is not claimed, claim it for the current player
-                        if (!objectiveOwners.containsKey(taskCategory)) {
+                        if (!objectiveOwners.containsKey(taskCategory) && currentPlayer.currentCategory == null || currentPlayer.currentCategory == taskCategory) {
                             objectiveOwners.put(taskCategory, currentPlayer);
                             Gdx.app.log("DEBUG", "Player " + currentPlayer.getName() + " has claimed the " + taskCategory + " objective.");
                         }
@@ -1014,8 +1062,20 @@ public class Main implements Screen {
                                 // Show the TaskSelectionScreen for confirmation
                                 ((Game) Gdx.app.getApplicationListener()).setScreen(new TaskSelectionScreen(this, task, () -> {
                                     // Deduct the selecting fee and assign the task
-                                    currentPlayer.getRand().deductAmount((int) (task.getResources().get(0).getAmount() * 0.2));
-                                    currentPlayer.getRand2().deductAmount((int) (task.getResources().get(1).getAmount() * 0.2));
+
+                                    // Check the resources and deduct the selecting fee
+                                    for (int i = 0; i < task.getResources().size(); i++) {
+
+                                        String resourceType = task.getResources().get(i).getType();
+                                        double amount = task.getResources().get(i).getAmount();
+
+                                        if (resourceType.equals("Money")) {
+                                            currentPlayer.getRand().deductAmount((int) (task.getResources().get(0).getAmount() * 0.2));
+                                        } else if (resourceType.equals("People")) {
+                                            currentPlayer.getRand2().deductAmount((int) (task.getResources().get(1).getAmount() * 0.2));
+                                        }
+                                    }
+
                                     currentPlayer.addTask(task);
                                     task.setOwner(currentPlayer);
                                     task.setTaken(true);
@@ -1043,22 +1103,21 @@ public class Main implements Screen {
                                     Gdx.app.log("DEBUG", "Educational" + selectedEducationTasks.size());
 
                                     // Check if all tasks for the objective have been selected
-                                    if (selectedEducationTasks.size() == 2 && taskCategory.equals("Educational")) {
+                                    if (selectedEducationTasks.size() == 10 && taskCategory.equals("Educational")) {
                                         educationObjectiveCanStart = true;
                                         Gdx.app.log("DEBUG", "Education Objective Should Start");
-                                    } else if (selectedFinanceTasks.size() == 2 && taskCategory.equals("Financial")) {
+                                    } else if (selectedFinanceTasks.size() == 10 && taskCategory.equals("Financial")) {
                                         financeObjectiveCanStart = true;
                                         Gdx.app.log("DEBUG", "Finance Objective Should Start");
-                                    } else if (selectedBusinessTasks.size() == 2 && taskCategory.equals("Business")) {
+                                    } else if (selectedBusinessTasks.size() == 10 && taskCategory.equals("Business")) {
                                         businessObjectiveCanStart = true;
                                         Gdx.app.log("DEBUG", "Business Objective Should Start");
                                     }
-                                    else if (selectedCommunityTasks.size() == 2 && taskCategory.equals("Community")) {
+                                    else if (selectedCommunityTasks.size() == 10 && taskCategory.equals("Community")) {
                                         communityObjectiveCanStart = true;
                                         Gdx.app.log("DEBUG", "Community Objective Should Start");
                                     }
 
-                                    renderer.updatePlayerTab(currentPlayer);
                                     Gdx.app.log("DEBUG", "Task selected but not started.");
                                 }));
 
@@ -1074,7 +1133,6 @@ public class Main implements Screen {
                 else if (currentNode.getTask() != null && currentNode.getTask().taskTaken()){
                     if (currentNode.getTask().getCategory() != null && currentNode.getTask().getCategory().equals("Educational") &&
                         currentPlayer.getCurrentCategory().equals("Educational") && educationObjectiveCanStart){
-                        // if the task hasn't been started and player doesn't have active task
                         if (!currentNode.getTask().isCompleted() && !currentNode.getTask().isActive() &&
                             !currentPlayer.hasActiveTask()) {
                             ((Game) Gdx.app.getApplicationListener()).setScreen(new TaskStartConfirmationScreen(this, currentNode.getTask(), () -> {
@@ -1090,10 +1148,9 @@ public class Main implements Screen {
                             currentPlayer.getCurrentCategory() != null &&
                             currentPlayer.getCurrentCategory().equals("Financial") &&
                             financeObjectiveCanStart) {
-                        // Your logic here
 
                         // if the task hasn't been started and player doesn't have active task
-                        if (!currentNode.getTask().isCompleted() && !currentNode.getTask().isActive() &&
+                        if (currentNode.getTask() != null && !currentNode.getTask().isCompleted() && !currentNode.getTask().isActive() &&
                             !currentPlayer.hasActiveTask()) {
                             ((Game) Gdx.app.getApplicationListener()).setScreen(new TaskStartConfirmationScreen(this, currentNode.getTask(), () -> {
                                 currentPlayer.startTask(currentNode.getTask());
@@ -1103,7 +1160,7 @@ public class Main implements Screen {
                             Gdx.app.log("DEBUG", "Task cannot be started as it already has been");
                         }
                     }
-                    if (currentNode.getTask().getCategory().equals("Business") &&
+                    if (currentNode.getTask() != null && currentNode.getTask().getCategory().equals("Business") &&
                         currentPlayer.getCurrentCategory().equals("Business") && businessObjectiveCanStart){
                         // if the task hasn't been started and player doesn't have active task
                         if (!currentNode.getTask().isCompleted() && !currentNode.getTask().isActive() &&
@@ -1116,7 +1173,7 @@ public class Main implements Screen {
                             Gdx.app.log("DEBUG", "Task cannot be started as it already has been");
                         }
                     }
-                    if (currentNode.getTask().getCategory().equals("Community") &&
+                    if (currentNode.getTask() != null && currentNode.getTask().getCategory().equals("Community") &&
                         currentPlayer.getCurrentCategory().equals("Community") && communityObjectiveCanStart){
                         // if the task hasn't been started and player doesn't have active task
                         if (!currentNode.getTask().isCompleted() && !currentNode.getTask().isActive() &&
@@ -1188,17 +1245,25 @@ public class Main implements Screen {
                 pendingTask.setTaken(true); // Mark the task as selected
                 currentPlayer.removePendingTask(pendingTask); // Remove the task from pending tasks
 
-                // Deduct the selecting fee
-                Resource requiredMoney = pendingTask.getResources().get(0); // Assuming the first resource is money
-                Resource requiredPeople = pendingTask.getResources().get(1); // Assuming the second resource is people
+                double requiredMoney = 0.0;
+                double requiredPeople = 0.0;
+                // Check the resources and deduct the selecting fee
+                for (int i = 0; i < pendingTask.getResources().size(); i++) {
 
-                int selectingFeeMoney = (int) (requiredMoney.getAmount() * 0.2);
-                int selectingFeePeople = (int) (requiredPeople.getAmount() * 0.2);
+                    String resourceType = pendingTask.getResources().get(i).getType();
+                    double amount = pendingTask.getResources().get(i).getAmount();
 
+                    if (resourceType.equals("Money")) {
+                        requiredMoney = amount;
+                    } else if (resourceType.equals("People")) {
+                        requiredPeople = amount;
+                    }
+                }
+                int selectingFeeMoney = (int) (requiredMoney * 0.2);
+                int selectingFeePeople = (int) (requiredPeople * 0.2);
                 currentPlayer.getRand().deductAmount(selectingFeeMoney); // Deduct money
                 currentPlayer.getRand2().deductAmount(selectingFeePeople); // Deduct people
 
-                renderer.updatePlayerTab(currentPlayer);
                 Gdx.app.log("DEBUG", "Selecting fee deducted: " + selectingFeeMoney + " ZAR and " + selectingFeePeople + " people");
                 Gdx.app.log("DEBUG", "Task selected but not started");
 
@@ -1230,7 +1295,8 @@ public class Main implements Screen {
 
         // Check if all tasks of the current category are complete
         if (currentPlayer.isCurrentCategoryComplete()) {
-            currentPlayer.setCurrentCategory(null); // Reset the current category
+
+
             Gdx.app.log("DEBUG", "All tasks of the current category are complete. Resetting category.");
         }
 
@@ -1242,8 +1308,13 @@ public class Main implements Screen {
 
         if (turn + 1 < players.size()) {
             turn++;
+            PlayerManager.getInstance().updateCurrentPlayer(turn);
         } else {
             turn = 0;
+            PlayerManager.getInstance().updateCurrentPlayer(turn);
+            makersRefill = true;
+            makerAlertTimer = WEATHER_ALERT_DURATION;
+            SoundManager.getInstance().playSound("notification");
             globalTurn++;
             currentSeason = weatherManager.getSeason(globalTurn);
         }
@@ -1253,7 +1324,6 @@ public class Main implements Screen {
         players.get(turn).markVisited(currentNode); // Mark the starting node as visited
 
         currentMoves = 0;
-        renderer.updatePlayerTab(players.get(turn));
         dice.resetFace();
         dice.setAlreadyRolled(false);
         dice.setRolling(false);
@@ -1267,7 +1337,9 @@ public class Main implements Screen {
         isSpaceBarHeld = false;
 
         // Update the playerTab to reflect the current player's tasks
-        tab.playerTarget(players.get(turn));
+
+
+        GameState.getInstance().updateData(globalTurn, years);
 
         // Handle pending tasks at the beginning of the turn
         handlePendingTasks();
@@ -1295,7 +1367,7 @@ public class Main implements Screen {
                 renderer.camera.zoom -= 0.02f;
             }
         } else if (input.isKeyPressed(Input.Keys.DOWN)) {
-            if (renderer.camera.zoom <= 0.4){
+            if (renderer.camera.zoom <= 0.6){
                 renderer.camera.zoom += 0.02f;
             }
 
@@ -1332,29 +1404,6 @@ public class Main implements Screen {
 
         // Check if mouse is inside the box's bounds
         return mouseX >= boxLeft && mouseX <= boxRight && mouseY >= boxBottom && mouseY <= boxTop;
-    }
-
-    private void handleNodeBoxWindowDrag(float mouseX, float mouseY) {
-        Vector3 mousePosition = uiCamera.unproject(new Vector3(mouseX, mouseY, 0));
-
-        draggingNodeBox = true;
-        offsetX = mousePosition.x - debugDisplayX;
-        offsetY = mousePosition.y - debugDisplayY;
-
-        Gdx.app.log("DEBUG", "NodeBox drag");
-
-        // Update position while dragging
-        if (draggingNodeBox) {
-
-            centerX =  mousePosition.x - offsetX;
-            centerY = mousePosition.y - offsetY;
-        }
-
-        // Stop dragging when mouse is released
-        if (!input.isButtonPressed(Input.Buttons.LEFT)) {
-            draggingNodeBox = false;
-        }
-
     }
 
     private void handleDebugWindowDrag(float mouseX, float mouseY) {
